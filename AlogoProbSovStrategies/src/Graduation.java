@@ -3,8 +3,30 @@ import java.util.Scanner;
 
 /* 
 
-Graduation Sample Input
+Graduation Input Example
+-----------------------
+1
+4 4 4 4
+0
+1 0
+3 0 1 3
+0
+4 0 1 2 3
+4 0 1 2 3
+3 0 1 3
+4 0 1 2 3
 
+-----------------------
+1
+4 2 2 4
+1 1
+0
+1 3
+1 2
+3 0 2 3
+3 1 2 3
+
+-----------------------
 2
 4 4 4 4
 0
@@ -22,18 +44,6 @@ Graduation Sample Input
 1 2
 3 0 2 3
 3 1 2 3
-
------------------------
-1
-4 4 4 4
-0
-1 0
-3 0 1 3
-0
-4 0 1 2 3
-4 0 1 2 3
-3 0 1 3
-4 0 1 2 3
 
 -----------------------
 1
@@ -78,7 +88,7 @@ public class Graduation {
 		long start_time = System.currentTimeMillis();
 		for( int i = 0 ; i < tc_cnt ; i++)
 		{
-			dbg_ln("\ntest case: "+i);
+			dbg_cri_ln("\ntest case: "+i);
 			graduation(scan);
 		}
 
@@ -86,7 +96,7 @@ public class Graduation {
 		
 		long diff = end_time - start_time;
 		
-		dbg_ln("diff:" + diff + " ms");
+		dbg_cri_ln("diff:" + diff + " ms");
 
 	}
 	
@@ -99,7 +109,10 @@ public class Graduation {
 	public static int max_course;
 	public static int [] pre_course_msk;
 	public static int [] ses_course_msk;
+	
 	public static int [][] memoization;
+	
+	public static int [][] minmap;
 	
 	public static void graduation(Scanner scan)
 	{
@@ -154,120 +167,125 @@ public class Graduation {
 
 			dbg_ln("("+i+") ses_course_cnt: "+ ses_course_cnt + " pre ses_course_msk: " + Integer.toBinaryString(ses_course_msk[i]));
 		}
-			
 		
 		
-		
-		
-
 		for( int i = 0 ; i < 1 ; i++)
 		{
-			int min_season = MAX_TOT_SEASON;
-			int course_subset_min_seaseon = 0;
+			memoization = new int[MAX_TOT_SEASON+1][];
+			minmap = new int[MAX_TOT_SEASON+1][];
 			
-			/* subset of total course */
-			for( int course_subset = course_set ; course_subset != 0 ; course_subset = (course_set & (course_subset - 1) ) )
+			for( int j = 0 ; j < memoization.length ; j++ )
 			{
-				if( Integer.bitCount(course_subset) == req_course )
+				memoization[j] = new int[1<<MAX_TOT_COURSE];
+				minmap[j] = new int[1<<MAX_TOT_COURSE];
+				
+				for( int k = 0 ; k < (1<<MAX_TOT_COURSE)  ; k++)
 				{
-					//dbg_ln("possible course_subset : " + Integer.toBinaryString(course_subset));
-					
-					course_subset_min_seaseon = getMinLastSeason(0, course_subset, 0, -1);
-					
-					if( course_subset_min_seaseon == -1) continue;
-					
-					if( course_subset_min_seaseon < min_season ) 
-					{
-						min_season = course_subset_min_seaseon;
-					}
+					memoization[j][k] = MAX_TOT_SEASON;
+					minmap[j][k] = 0;
 				}
 			}
 			
-			if( min_season == MAX_TOT_SEASON)
+			int min_semester = take_semester(0, 0);
+			
+			if( min_semester == -1 )
 			{
-				System.out.println("IMPOSSIBLE");
+				System.out.println(i + ") IMPOSSIBLE");
 			}
 			else
 			{
-				System.out.println(i+")"+min_season);
+				System.out.println(i + ") min_semester ="+min_semester);
+				
+				dump_min_semester_courses();
+				
 			}
 		}
-		
-
-		
 	}
 	
 	
-	public static int getMinLastSeason( int complete_course, int remaining_course, int season_course_set, int season )
+	/*
+	 * @return last semester
+	 */
+	public static int take_semester(int semester, int taken_course)
 	{
-		int new_complete_course = complete_course;
-		int new_remaining_course = remaining_course;
-		
-		if( season >= 0 )
-		{
-			new_complete_course |= season_course_set;
-			new_remaining_course &= (~season_course_set);
-		}
+		//dbg_ln(indent(semester)+"take_semester semester("+semester+") taken_course("+Integer.toBinaryString(taken_course)+")");
 
-		if( new_remaining_course == 0 ) return 0;
-		
-		int new_season_course_tot_set = 0;
-		
-		int new_season = 0;
-		
-		for( new_season = (season+1) ; new_season < ses_course_msk.length ; new_season++ )
+		if( Integer.bitCount(taken_course) >= req_course )
 		{
-			new_season_course_tot_set = new_remaining_course & ses_course_msk[new_season]; 
-			
-			new_season_course_tot_set = removeUnqualifiedCourse(new_complete_course, new_season_course_tot_set);
-			
-			if( new_season_course_tot_set != 0 ) break;
+			//dbg_ln(indent(semester)+"*taken_course meets req_course("+req_course+")");
+			return 0;
 		}
 		
-		if( new_season == ses_course_msk.length ) return -1; 
-				
-		
-		int min_last_season = MAX_TOT_SEASON ; 
-		
-		int subset_last_season = 0;
-		
-		for( int subset = new_season_course_tot_set ; subset != 0 ; subset = ( new_season_course_tot_set & ( subset - 1 ) ) )
+		if( semester >= tot_season )
 		{
-			if( Integer.bitCount(subset) <= max_course )
-			{
-				subset_last_season = getMinLastSeason(new_complete_course, new_remaining_course, subset, new_season);
-				
-				if( subset_last_season == -1 ) continue;
-				
-				if( subset_last_season == 0 )
-				{
-					min_last_season = subset_last_season;
-					break;
-				}
-				
-				if( subset_last_season < min_last_season )
-				{
-					min_last_season = subset_last_season;
-				}
-			}
-		}
-		
-		if( min_last_season == MAX_TOT_SEASON)
-		{
+			//dbg_ln(indent(semester)+"*semester is over tot_season");
 			return -1;
 		}
-		else
+		
+		/* courses which can be taken in this semester */
+		int course_set = ses_course_msk[semester] & (~taken_course); // remove already taken courses from semester open courses
+		
+		course_set = removeNeedPreCourse(taken_course, course_set); // remove courses which needs prerequisite course
+		
+		if( course_set == 0 )
 		{
-			return min_last_season + 1;
+			//dbg_ln(indent(semester)+"*semester course_set is zero");
+			//minmap[semester][taken_course] = 0;
+			return take_semester( semester + 1, taken_course );
 		}
+		
+		
+		int min_last_semester = MAX_TOT_SEASON;
+		int last_semester = 0;
+		
+		for( int sub_course_set = course_set ; sub_course_set != 0 ; sub_course_set = ( course_set & ( sub_course_set - 1)))
+		{	
+			if( Integer.bitCount(sub_course_set) > max_course) continue;
+			
+			//dbg_ln(indent(semester)+"*took("+Integer.toBinaryString(sub_course_set)+")");
+
+			last_semester = memoization[semester + 1][sub_course_set | taken_course];
+			
+			if( last_semester == MAX_TOT_SEASON)
+			{
+				last_semester = take_semester(semester + 1, sub_course_set | taken_course);
+				memoization[semester + 1][sub_course_set | taken_course] = last_semester;
+			}
+			
+			
+			if( last_semester == -1 ) continue;
+			
+			if( last_semester < min_last_semester)
+			{
+				min_last_semester = last_semester;
+				minmap[semester][taken_course] = sub_course_set;
+			}
+
+			if( last_semester == 0 )
+			{
+				min_last_semester = last_semester;
+				minmap[semester][taken_course] = sub_course_set;
+				break;
+			}
+		}
+		
+		if(min_last_semester == MAX_TOT_SEASON)
+		{	
+			//dbg_ln(indent(semester)+"*return -1");
+			return -1;
+		}
+
+		//dbg_ln(indent(semester)+"*return "+(min_last_semester + 1));
+		return (min_last_semester + 1);
 	}
 	
+		
 	
-	public static int removeUnqualifiedCourse(int complete_course, int course_set)
+	public static int removeNeedPreCourse(int taken_course, int course_set)
 	{
 		for( int i = 0 ; i < pre_course_msk.length ; i++)
 		{
-			if( ((course_set & ( 1 << i)) != 0) && ( (complete_course & pre_course_msk[i]) != pre_course_msk[i] ) )
+			if( ((course_set & ( 1 << i)) != 0) && ( (taken_course & pre_course_msk[i]) != pre_course_msk[i] ) )
 			{
 				course_set &= ( ~(1 << i) );
 			}
@@ -276,6 +294,37 @@ public class Graduation {
 		return course_set;
 	}
 	
+	
+	public static void dump_min_semester_courses()
+	{
+		int sub_course_set;
+		int taken_course = 0;
+		
+		for( int i = 0 ; i < max_course ; i++)
+		{
+			sub_course_set = minmap[i][taken_course];
+			taken_course |= sub_course_set;
+
+			System.out.println(i+") sub_course_set="+Integer.toBinaryString(sub_course_set)
+									+" taken_course="+Integer.toBinaryString(taken_course) );
+			
+			if( Integer.bitCount(taken_course) == req_course )
+				break;
+		}
+		
+	}
+	
+	
+	
+	public static String indent(int len)
+	{
+		String str = "";
+		for( int i = 0 ; i < len ; i++)
+		{
+			str += "-";
+		}
+		return str;
+	}
 	
 	public static void dbg(String msg)
 	{
@@ -286,5 +335,16 @@ public class Graduation {
 	{
 		dbg(msg+"\n");
 	}
+	
+	public static void dbg_cri(String msg)
+	{
+		System.out.print(msg);
+	}
+	
+	public static void dbg_cri_ln(String msg)
+	{
+		dbg_cri(msg+"\n");
+	}
+	
 	
 }
