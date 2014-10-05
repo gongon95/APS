@@ -99,6 +99,7 @@ public class Graduation {
 	public static int max_course;
 	public static int [] pre_course_msk;
 	public static int [] ses_course_msk;
+	public static int [][] memoization;
 	
 	public static void graduation(Scanner scan)
 	{
@@ -153,6 +154,10 @@ public class Graduation {
 
 			dbg_ln("("+i+") ses_course_cnt: "+ ses_course_cnt + " pre ses_course_msk: " + Integer.toBinaryString(ses_course_msk[i]));
 		}
+			
+		
+		
+		
 		
 
 		for( int i = 0 ; i < 1 ; i++)
