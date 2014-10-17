@@ -288,7 +288,7 @@ public class PartSum {
 	
 	public static void get_zero_closest_range()
 	{
-		int [] arr = gen_int_array(10000);
+		int [] arr = gen_int_array(1000);
 		//dump_int_array(arr);
 
 		int [] cum_arr = get_part_sum(arr);
